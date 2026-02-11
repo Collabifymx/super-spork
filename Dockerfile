@@ -3,12 +3,12 @@ RUN corepack enable
 WORKDIR /app
 
 # Copy workspace config
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/
 COPY packages/shared/package.json packages/shared/
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install dependencies (no lockfile in repo)
+RUN pnpm install
 
 # Copy source
 COPY packages/shared/ packages/shared/
