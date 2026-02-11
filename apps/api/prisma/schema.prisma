@@ -1,0 +1,777 @@
+// ============================================================================
+// Collabify - Prisma Schema
+// UGC & Influencer Marketplace
+// ============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// AUTH & USERS
+// ============================================================================
+
+enum UserRole {
+  CREATOR
+  BRAND
+  ADMIN
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  MAGIC_LINK
+}
+
+model User {
+  id            String       @id @default(cuid())
+  email         String       @unique
+  passwordHash  String?
+  role          UserRole
+  authProvider  AuthProvider  @default(EMAIL)
+  emailVerified Boolean      @default(false)
+  avatarUrl     String?
+  firstName     String
+  lastName      String
+  isActive      Boolean      @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  refreshTokens  RefreshToken[]
+  creatorProfile CreatorProfile?
+  brandMembers   BrandMember[]
+  auditLogs      AuditLog[]
+  notifications  Notification[]
+  sentMessages   Message[]        @relation("SentMessages")
+  readReceipts   ReadReceipt[]
+  assignments    ConversationAssignment[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ============================================================================
+// BRANDS (multi-tenant)
+// ============================================================================
+
+enum BrandMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model Brand {
+  id        String  @id @default(cuid())
+  name      String
+  slug      String  @unique
+  industry  String?
+  website   String?
+  logoUrl   String?
+  size      String? // startup, small, medium, large, enterprise
+  bio       String?
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members       BrandMember[]
+  campaigns     Campaign[]
+  conversations Conversation[]
+  subscription  Subscription?
+  shortlists    Shortlist[]
+  paymentIntents PaymentIntentRecord[]
+
+  @@index([slug])
+  @@map("brands")
+}
+
+model BrandMember {
+  id        String          @id @default(cuid())
+  brandId   String
+  userId    String
+  role      BrandMemberRole @default(MEMBER)
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, userId])
+  @@index([brandId])
+  @@index([userId])
+  @@map("brand_members")
+}
+
+// ============================================================================
+// CREATORS
+// ============================================================================
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+model CreatorProfile {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  displayName        String
+  slug               String             @unique
+  bio                String?
+  location           String?
+  city               String?
+  country            String?
+  languages          String[]           @default([])
+  categories         String[]           @default([])  // max 3 enforced in app
+  tags               String[]           @default([])
+  gender             String?
+  dateOfBirth        DateTime?
+  startingPrice      Int?               // in cents
+  isAvailable        Boolean            @default(true)
+  mediaKitUrl        String?
+  verificationStatus VerificationStatus @default(PENDING)
+  verifiedAt         DateTime?
+  rejectionReason    String?
+  responseTimeHours  Int?
+  totalFollowers     Int                @default(0)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  socialAccounts SocialAccount[]
+  portfolioItems PortfolioItem[]
+  rates          CreatorRate[]
+  applications   Application[]
+  conversations  Conversation[]
+  contracts      Contract[]
+  deliverables   Deliverable[]
+  shortlistedBy  Shortlist[]
+  payoutRecords  PayoutRecord[]
+
+  @@index([slug])
+  @@index([verificationStatus])
+  @@index([location])
+  @@index([categories])
+  @@index([totalFollowers])
+  @@index([startingPrice])
+  @@map("creator_profiles")
+}
+
+enum SocialPlatform {
+  TIKTOK
+  INSTAGRAM
+  YOUTUBE
+  TWITTER
+  FACEBOOK
+  LINKEDIN
+}
+
+model SocialAccount {
+  id              String         @id @default(cuid())
+  creatorId       String
+  platform        SocialPlatform
+  handle          String
+  profileUrl      String?
+  followers       Int            @default(0)
+  avgViews        Int?
+  engagementRate  Float?
+  isVerified      Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  creator CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([creatorId, platform])
+  @@index([platform])
+  @@index([followers])
+  @@map("social_accounts")
+}
+
+model PortfolioItem {
+  id          String   @id @default(cuid())
+  creatorId   String
+  title       String
+  description String?
+  mediaUrl    String
+  mediaType   String   // image, video, link
+  thumbnailUrl String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@index([creatorId])
+  @@map("portfolio_items")
+}
+
+model CreatorRate {
+  id          String   @id @default(cuid())
+  creatorId   String
+  platform    SocialPlatform
+  deliverable String   // e.g. "1 TikTok", "1 Reel", "Bundle"
+  priceInCents Int
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@index([creatorId])
+  @@map("creator_rates")
+}
+
+// ============================================================================
+// CAMPAIGNS
+// ============================================================================
+
+enum CampaignStatus {
+  DRAFT
+  LIVE
+  PAUSED
+  CLOSED
+}
+
+model Campaign {
+  id          String         @id @default(cuid())
+  brandId     String
+  title       String
+  slug        String         @unique
+  objective   String?
+  brief       String?
+  platforms   SocialPlatform[]
+  deliverables String[]
+  deadline    DateTime?
+  location    String?
+  budgetMin   Int?           // cents
+  budgetMax   Int?           // cents
+  status      CampaignStatus @default(DRAFT)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  brand        Brand                @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  targeting    CampaignTargeting?
+  attachments  CampaignAttachment[]
+  applications Application[]
+  conversations Conversation[]
+  contracts    Contract[]
+
+  @@index([brandId])
+  @@index([status])
+  @@index([slug])
+  @@map("campaigns")
+}
+
+model CampaignTargeting {
+  id               String   @id @default(cuid())
+  campaignId       String   @unique
+  minFollowers     Int?
+  maxFollowers     Int?
+  categories       String[] @default([])
+  locations        String[] @default([])
+  genders          String[] @default([])
+  ageMin           Int?
+  ageMax           Int?
+  platforms        SocialPlatform[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@map("campaign_targetings")
+}
+
+model CampaignAttachment {
+  id         String   @id @default(cuid())
+  campaignId String
+  fileName   String
+  fileUrl    String
+  fileSize   Int
+  mimeType   String
+  createdAt  DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@map("campaign_attachments")
+}
+
+// ============================================================================
+// APPLICATIONS / PROPOSALS / OFFERS / CONTRACTS
+// ============================================================================
+
+enum ApplicationStatus {
+  PENDING
+  SHORTLISTED
+  OFFERED
+  COUNTER_OFFERED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+model Application {
+  id          String            @id @default(cuid())
+  campaignId  String
+  creatorId   String
+  coverLetter String?
+  priceInCents Int
+  estimatedDays Int?
+  status       ApplicationStatus @default(PENDING)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  campaign Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  creator  CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  offers   Offer[]
+  contract Contract?
+
+  // Prevent duplicate applications
+  @@unique([campaignId, creatorId])
+  @@index([campaignId])
+  @@index([creatorId])
+  @@index([status])
+  @@map("applications")
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  COUNTERED
+}
+
+model Offer {
+  id             String      @id @default(cuid())
+  applicationId  String
+  fromBrand      Boolean     // true = brand sent, false = creator counter
+  priceInCents   Int
+  message        String?
+  deliverables   String[]
+  deadline       DateTime?
+  status         OfferStatus @default(PENDING)
+  expiresAt      DateTime?
+  respondedAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([status])
+  @@map("offers")
+}
+
+enum ContractStatus {
+  ACTIVE
+  DELIVERING
+  IN_REVIEW
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+model Contract {
+  id            String         @id @default(cuid())
+  applicationId String         @unique
+  campaignId    String
+  creatorId     String
+  brandId       String
+  priceInCents  Int
+  commissionRate Float         @default(0.15) // 15%
+  deliverables  String[]
+  deadline      DateTime?
+  status        ContractStatus @default(ACTIVE)
+  completedAt   DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  application     Application           @relation(fields: [applicationId], references: [id])
+  campaign        Campaign              @relation(fields: [campaignId], references: [id])
+  creator         CreatorProfile        @relation(fields: [creatorId], references: [id])
+  deliverableItems Deliverable[]
+  paymentIntents  PaymentIntentRecord[]
+  ledgerEntries   LedgerEntry[]
+
+  @@index([campaignId])
+  @@index([creatorId])
+  @@index([status])
+  @@map("contracts")
+}
+
+// ============================================================================
+// DELIVERABLES
+// ============================================================================
+
+enum DeliverableStatus {
+  PENDING
+  SUBMITTED
+  CHANGES_REQUESTED
+  APPROVED
+  REJECTED
+}
+
+model Deliverable {
+  id          String            @id @default(cuid())
+  contractId  String
+  creatorId   String
+  title       String
+  description String?
+  platform    SocialPlatform?
+  status      DeliverableStatus @default(PENDING)
+  dueDate     DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  contract    Contract               @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  creator     CreatorProfile         @relation(fields: [creatorId], references: [id])
+  submissions DeliverableSubmission[]
+  reviews     DeliverableReview[]
+
+  @@index([contractId])
+  @@index([creatorId])
+  @@index([status])
+  @@map("deliverables")
+}
+
+model DeliverableSubmission {
+  id            String   @id @default(cuid())
+  deliverableId String
+  fileUrl       String?
+  linkUrl       String?
+  notes         String?
+  version       Int      @default(1)
+  createdAt     DateTime @default(now())
+
+  deliverable Deliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+
+  @@index([deliverableId])
+  @@map("deliverable_submissions")
+}
+
+model DeliverableReview {
+  id            String   @id @default(cuid())
+  deliverableId String
+  approved      Boolean
+  feedback      String?
+  reviewedBy    String   // userId
+  createdAt     DateTime @default(now())
+
+  deliverable Deliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+
+  @@index([deliverableId])
+  @@map("deliverable_reviews")
+}
+
+// ============================================================================
+// CHAT / MESSAGING
+// ============================================================================
+
+model Conversation {
+  id         String   @id @default(cuid())
+  brandId    String
+  creatorId  String
+  campaignId String?
+  isArchived Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  brand      Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  creator    CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  campaign   Campaign?      @relation(fields: [campaignId], references: [id])
+  messages   Message[]
+  readReceipts ReadReceipt[]
+  assignments  ConversationAssignment[]
+
+  // ONE conversation per brand+creator+campaign
+  @@unique([brandId, creatorId, campaignId])
+  @@index([brandId])
+  @@index([creatorId])
+  @@index([campaignId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  attachmentUrl  String?
+  attachmentName String?
+  isSystem       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("SentMessages", fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model ReadReceipt {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("read_receipts")
+}
+
+model ConversationAssignment {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  assignedAt     DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("conversation_assignments")
+}
+
+// ============================================================================
+// SHORTLISTS / FAVORITES
+// ============================================================================
+
+model Shortlist {
+  id        String   @id @default(cuid())
+  brandId   String
+  creatorId String
+  note      String?
+  createdAt DateTime @default(now())
+
+  brand   Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  creator CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, creatorId])
+  @@map("shortlists")
+}
+
+// ============================================================================
+// SUBSCRIPTIONS & PAYWALL
+// ============================================================================
+
+enum PlanTier {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(cuid())
+  name        String
+  tier        PlanTier @unique
+  priceMonthly Int     // cents
+  priceYearly  Int     // cents
+  features    Json     // { maxCampaigns: 3, canMessage: true, ... }
+  stripePriceIdMonthly String?
+  stripePriceIdYearly  String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@map("subscription_plans")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  TRIALING
+}
+
+model Subscription {
+  id                  String             @id @default(cuid())
+  brandId             String             @unique
+  planId              String
+  stripeSubscriptionId String?           @unique
+  stripeCustomerId    String?
+  status              SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart  DateTime
+  currentPeriodEnd    DateTime
+  cancelAtPeriodEnd   Boolean            @default(false)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  brand Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  plan  SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@index([brandId])
+  @@index([stripeSubscriptionId])
+  @@map("subscriptions")
+}
+
+// ============================================================================
+// PAYMENTS & LEDGER
+// ============================================================================
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  CAPTURED
+  RELEASED
+  REFUNDED
+  FAILED
+  CANCELLED
+}
+
+model PaymentIntentRecord {
+  id              String        @id @default(cuid())
+  contractId      String
+  brandId         String
+  stripePaymentId String?       @unique
+  amountInCents   Int
+  commissionCents Int
+  creatorPayoutCents Int
+  currency        String        @default("usd")
+  status          PaymentStatus @default(PENDING)
+  capturedAt      DateTime?
+  releasedAt      DateTime?
+  refundedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  contract Contract @relation(fields: [contractId], references: [id])
+  brand    Brand    @relation(fields: [brandId], references: [id])
+
+  @@index([contractId])
+  @@index([brandId])
+  @@index([stripePaymentId])
+  @@map("payment_intent_records")
+}
+
+enum LedgerEntryType {
+  ESCROW_HOLD
+  ESCROW_CAPTURE
+  CREATOR_PAYOUT
+  PLATFORM_COMMISSION
+  REFUND
+  ADJUSTMENT
+}
+
+model LedgerEntry {
+  id           String          @id @default(cuid())
+  contractId   String
+  type         LedgerEntryType
+  amountInCents Int
+  currency     String          @default("usd")
+  description  String?
+  metadata     Json?
+  createdAt    DateTime        @default(now())
+
+  contract Contract @relation(fields: [contractId], references: [id])
+
+  @@index([contractId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("ledger_entries")
+}
+
+model PayoutRecord {
+  id              String   @id @default(cuid())
+  creatorId       String
+  stripeTransferId String? @unique
+  amountInCents   Int
+  currency        String   @default("usd")
+  status          String   @default("pending") // pending, paid, failed
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  creator CreatorProfile @relation(fields: [creatorId], references: [id])
+
+  @@index([creatorId])
+  @@map("payout_records")
+}
+
+// ============================================================================
+// AUDIT & NOTIFICATIONS
+// ============================================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String   // e.g. "campaign.created", "user.login"
+  entityType String?  // e.g. "Campaign", "User"
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+enum NotificationType {
+  NEW_APPLICATION
+  OFFER_RECEIVED
+  OFFER_ACCEPTED
+  CONTRACT_CREATED
+  DELIVERABLE_SUBMITTED
+  DELIVERABLE_APPROVED
+  PAYMENT_RECEIVED
+  MESSAGE_RECEIVED
+  VERIFICATION_UPDATE
+  SYSTEM
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String?
+  link      String?
+  isRead    Boolean          @default(false)
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}

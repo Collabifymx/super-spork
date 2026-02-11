@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
+@layer base {
+  :root {
+    --color-lime: #b8e619;
+    --color-purple: #a855f7;
+    --color-dark: #0d0d0d;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  .gradient-hero {
+    background: linear-gradient(180deg, #0d0d0d 0%, #1a1a2e 100%);
+  }
+
+  .btn-primary {
+    @apply bg-lime-400 text-surface-dark font-semibold px-6 py-2.5 rounded-full
+           hover:bg-lime-300 transition-all duration-200 active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply bg-white/10 text-white border border-white/20 px-6 py-2.5 rounded-full
+           hover:bg-white/20 transition-all duration-200;
+  }
+
+  .btn-outline {
+    @apply border-2 border-lime-400 text-lime-400 px-6 py-2.5 rounded-full
+           hover:bg-lime-400 hover:text-surface-dark transition-all duration-200;
+  }
+
+  .card {
+    @apply bg-white rounded-3xl shadow-card hover:shadow-card-hover
+           transition-all duration-300 overflow-hidden;
+  }
+
+  .card-elevated {
+    @apply card hover:-translate-y-1;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+  }
+
+  .badge-lime {
+    @apply badge bg-lime-400/20 text-lime-500;
+  }
+
+  .badge-purple {
+    @apply badge bg-purple-400/20 text-purple-500;
+  }
+
+  .input-base {
+    @apply w-full px-4 py-3 rounded-xl border border-gray-200 bg-white
+           focus:ring-2 focus:ring-lime-400 focus:border-transparent
+           outline-none transition-all duration-200;
+  }
+
+  .skeleton {
+    @apply animate-pulse bg-gray-200 rounded-lg;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}

@@ -1,0 +1,32 @@
+{
+  "name": "collabify",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Collabify - UGC & Influencer Marketplace",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "db:migrate": "pnpm --filter @collabify/api db:migrate",
+    "db:seed": "pnpm --filter @collabify/api db:seed",
+    "db:studio": "pnpm --filter @collabify/api db:studio",
+    "db:generate": "pnpm --filter @collabify/api db:generate",
+    "db:reset": "pnpm --filter @collabify/api db:reset",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "prettier": "^3.4.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

@@ -1,0 +1,172 @@
+{
+  "info": {
+    "name": "Collabify API",
+    "description": "UGC & Influencer Marketplace API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000/api" },
+    { "key": "accessToken", "value": "" },
+    { "key": "brandId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register Brand",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"brand@example.com\",\"password\":\"Password123\",\"firstName\":\"Evelyn\",\"lastName\":\"Munoz\",\"role\":\"BRAND\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Register Creator",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"creator@example.com\",\"password\":\"Password123\",\"firstName\":\"Susan\",\"lastName\":\"Adams\",\"role\":\"CREATOR\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"brand@example.com\",\"password\":\"Password123\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Search Creators",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/search/creators?sortBy=followers&limit=10",
+              "query": [
+                { "key": "sortBy", "value": "followers" },
+                { "key": "limit", "value": "10" },
+                { "key": "categories", "value": "Beauty", "disabled": true },
+                { "key": "verifiedOnly", "value": "true", "disabled": true }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Campaigns",
+      "item": [
+        {
+          "name": "Create Campaign",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/campaigns",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Summer Collection\",\"objective\":\"Brand awareness\",\"brief\":\"Create authentic content\",\"platforms\":[\"TIKTOK\",\"INSTAGRAM\"],\"deliverables\":[\"1 TikTok\",\"2 Stories\"],\"budgetMin\":200000,\"budgetMax\":500000,\"status\":\"DRAFT\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "List Live Campaigns",
+          "request": { "method": "GET", "url": "{{baseUrl}}/campaigns" }
+        }
+      ]
+    },
+    {
+      "name": "Applications",
+      "item": [
+        {
+          "name": "Apply to Campaign",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/applications",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"campaignId\":\"CAMPAIGN_ID\",\"coverLetter\":\"I would love to work on this!\",\"priceInCents\":350000}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "item": [
+        {
+          "name": "Get Inbox",
+          "request": { "method": "GET", "url": "{{baseUrl}}/chat/inbox" }
+        },
+        {
+          "name": "Create Conversation",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/chat/conversations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"creatorId\":\"CREATOR_ID\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Payment Intent",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/payments/intent/CONTRACT_ID"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Dashboard",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/dashboard" }
+        },
+        {
+          "name": "Pending Verifications",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/verifications" }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+        }
+      ]
+    }
+  ]
+}
