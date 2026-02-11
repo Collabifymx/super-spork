@@ -13,7 +13,5 @@ WORKDIR /app/apps/api
 
 RUN npx prisma generate
 RUN pnpm run build
-RUN ls -la dist/ && ls dist/main*
-
 EXPOSE 4000
-CMD ["sh", "-c", "npx prisma migrate deploy; node dist/main"]
+CMD ["sh", "-c", "npx prisma migrate deploy; node dist/src/main"]
