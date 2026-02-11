@@ -5,21 +5,15 @@ RUN corepack enable
 
 WORKDIR /app
 
-# Copy everything
 COPY . .
 
-# Install dependencies
 RUN pnpm install
 
-# Generate Prisma client
-RUN cd apps/api && npx prisma generate
-
-# Build API using pnpm from root
-RUN pnpm --filter @collabify/api run build
-
-# Verify dist exists
-RUN ls -la apps/api/dist/
-
 WORKDIR /app/apps/api
+
+RUN npx prisma generate
+RUN npx tsc -p tsconfig.json
+RUN echo "=== BUILD OUTPUT ===" && ls -la dist/ && ls dist/main*
+
 EXPOSE 4000
 CMD ["sh", "-c", "npx prisma migrate deploy; node dist/main"]
