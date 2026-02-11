@@ -64,7 +64,7 @@ export default function RegisterPage() {
     setServerError('');
     try {
       await registerUser(data);
-      router.push('/');
+      router.push('/search');
     } catch (err: any) {
       setServerError(err.message || 'Registration failed');
     }

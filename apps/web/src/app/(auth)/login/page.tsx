@@ -27,7 +27,7 @@ export default function LoginPage() {
     setServerError('');
     try {
       await login(data.email, data.password);
-      router.push('/');
+      router.push('/search');
     } catch (err: any) {
       setServerError(err.message || 'Login failed');
     }
