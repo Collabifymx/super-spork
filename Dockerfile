@@ -12,8 +12,8 @@ RUN pnpm install
 WORKDIR /app/apps/api
 
 RUN npx prisma generate
-RUN npx tsc -p tsconfig.json
-RUN echo "=== BUILD OUTPUT ===" && ls -la dist/ && ls dist/main*
+RUN pnpm run build
+RUN ls -la dist/ && ls dist/main*
 
 EXPOSE 4000
 CMD ["sh", "-c", "npx prisma migrate deploy; node dist/main"]
