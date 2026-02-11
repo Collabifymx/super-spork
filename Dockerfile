@@ -11,10 +11,15 @@ COPY . .
 # Install dependencies
 RUN pnpm install
 
-# Generate Prisma client and build API
-WORKDIR /app/apps/api
-RUN npx prisma generate
-RUN npx nest build
+# Generate Prisma client
+RUN cd apps/api && npx prisma generate
 
+# Build API using pnpm from root
+RUN pnpm --filter @collabify/api run build
+
+# Verify dist exists
+RUN ls -la apps/api/dist/
+
+WORKDIR /app/apps/api
 EXPOSE 4000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "npx prisma migrate deploy; node dist/main"]
